@@ -1,5 +1,4 @@
 import asyncio
-import nest_asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
@@ -17,12 +16,10 @@ from contact import contact_info
 from channels import channels_info
 from agent_page import agent_start, handle_agent_message, agent_tips
 
-
 # ====================================================
 # رسالة التشغيل
 # ====================================================
 print("🚀 بوت البرمجة براعة وابتكار بدأ التشغيل بنجاح!")
-
 
 # ====================================================
 # القائمة الرئيسية
@@ -45,7 +42,6 @@ async def home_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(text, reply_markup=reply_markup)
     elif update.callback_query:
         await update.callback_query.message.edit_text(text, reply_markup=reply_markup)
-
 
 # ====================================================
 # معالجة الأزرار (Callback Buttons)
@@ -77,7 +73,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await home_menu(update, context)
         context.user_data["mode"] = None
 
-
 # ====================================================
 # التعامل مع الرسائل النصية
 # ====================================================
@@ -87,7 +82,6 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await handle_agent_message(update, context)
     else:
         await home_menu(update, context)
-
 
 # ====================================================
 # أوامر مباشرة (Commands)
@@ -111,33 +105,35 @@ async def channels_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await channels_info(update, context)
     context.user_data["mode"] = None
 
+async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await home_menu(update, context)
+    context.user_data["mode"] = None
 
 # ====================================================
 # تشغيل التطبيق
 # ====================================================
-async def main():
+def main():
     print("✅ بدء تشغيل البوت (Polling Mode)...")
 
     app = Application.builder().token(TOKEN).build()
 
-    # أوامر
+    # ===== أوامر =====
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("agent", agent_command))
     app.add_handler(CommandHandler("about", about_command))
     app.add_handler(CommandHandler("contact", contact_command))
     app.add_handler(CommandHandler("channels", channels_command))
+    app.add_handler(CommandHandler("menu", menu_command))  # زر الرجوع للقائمة
 
-    # الأزرار والرسائل
+    # ===== الأزرار والرسائل =====
     app.add_handler(CallbackQueryHandler(button_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
 
-    # بدء التشغيل
-    await app.run_polling(drop_pending_updates=True)
-
+    # ===== تشغيل البوت =====
+    app.run_polling(drop_pending_updates=True)
 
 # ====================================================
 # نقطة الدخول للتشغيل
 # ====================================================
 if __name__ == "__main__":
-    nest_asyncio.apply()
-    asyncio.run(main())
+    main()
