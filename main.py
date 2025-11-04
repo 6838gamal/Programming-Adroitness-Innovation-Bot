@@ -1,5 +1,3 @@
-import streamlit as st
-import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
@@ -14,9 +12,7 @@ from about import about_info
 from contact import contact_info
 from channels import channels_info
 from agent_page import agent_start, handle_agent_message, agent_tips
-
-st.title("🤖 بوت البرمجة براعة وابتكار")
-st.success("يتم تشغيل البوت الآن في الخلفية ✅")
+import asyncio
 
 print("🚀 بوت البرمجة براعة وابتكار بدأ التشغيل بنجاح!")
 
@@ -71,7 +67,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await home_menu(update, context)
 
-# === إعداد التطبيق وتشغيل البوت ===
+# === تشغيل البوت ===
 async def main():
     app = Application.builder().token(TOKEN).build()
 
@@ -89,9 +85,6 @@ async def main():
     print("✅ البوت جاهز للعمل ...")
     await app.run_polling()
 
-# === تشغيل البوت داخل Streamlit/Render بدون مشاكل حلقة asyncio ===
-try:
-    loop = asyncio.get_running_loop()
-    loop.create_task(main())
-except RuntimeError:
+if __name__ == "__main__":
+    # الطريقة الصحيحة لتشغيل البوت على Render
     asyncio.run(main())
