@@ -1,32 +1,44 @@
-import asyncio
 import streamlit as st
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters
+import asyncio
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    CallbackQueryHandler,
+    MessageHandler,
+    filters,
+    ContextTypes,
+)
 from config import TOKEN
 from about import about_info
 from contact import contact_info
 from channels import channels_info
 from agent_page import agent_start, handle_agent_message, agent_tips
 
-print("🚀 بوت البرمجة براعة وابتكار بدأ التشغيل بنجاح عبر Streamlit!")
+st.title("🤖 بوت البرمجة براعة وابتكار")
+st.success("يتم تشغيل البوت الآن في الخلفية ✅")
 
-# === الصفحة الرئيسية للبوت ===
-async def home_menu(update, context):
+print("🚀 بوت البرمجة براعة وابتكار بدأ التشغيل بنجاح!")
+
+# === الصفحة الرئيسية ===
+async def home_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_name = update.effective_user.first_name
     text = f"🎓 أهلاً بك {user_name} في البرمجة براعة وابتكار!\n\nاختر القسم الذي ترغب في استكشافه:"
     keyboard = [
-        [dict(text="🤖 الوكيل الذكي", callback_data="agent")],
-        [dict(text="ℹ️ من نحن", callback_data="about")],
-        [dict(text="📞 تواصل مع المطور", callback_data="contact")],
-        [dict(text="📺 قنوات البرمجة براعة وابتكار", callback_data="channels")]
+        [InlineKeyboardButton("🤖 الوكيل الذكي", callback_data="agent")],
+        [InlineKeyboardButton("ℹ️ من نحن", callback_data="about")],
+        [InlineKeyboardButton("📞 تواصل مع المطور", callback_data="contact")],
+        [InlineKeyboardButton("📺 قنوات البرمجة براعة وابتكار", callback_data="channels")],
     ]
-    markup = {"inline_keyboard": [[{"text": b["text"], "callback_data": b["callback_data"]}] for b in keyboard]}
-    if update.message:
-        await update.message.reply_text(text, reply_markup=markup)
-    elif update.callback_query:
-        await update.callback_query.message.edit_text(text, reply_markup=markup)
+    reply_markup = InlineKeyboardMarkup(keyboard)
 
-# === معالجات ===
-async def button_handler(update, context):
+    if update.message:
+        await update.message.reply_text(text, reply_markup=reply_markup)
+    elif update.callback_query:
+        await update.callback_query.message.edit_text(text, reply_markup=reply_markup)
+
+# === معالجة الأزرار ===
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
@@ -48,32 +60,38 @@ async def button_handler(update, context):
         await home_menu(update, context)
         context.user_data["mode"] = None
 
-async def message_handler(update, context):
+# === التعامل مع الرسائل ===
+async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data.get("mode") == "agent":
         await handle_agent_message(update, context)
     else:
         await home_menu(update, context)
 
-# === أوامر ===
-async def start(update, context):
+# === أوامر البوت ===
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await home_menu(update, context)
 
+# === إعداد التطبيق وتشغيل البوت ===
 async def main():
     app = Application.builder().token(TOKEN).build()
 
+    # أوامر
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("agent", agent_start))
     app.add_handler(CommandHandler("about", about_info))
     app.add_handler(CommandHandler("contact", contact_info))
     app.add_handler(CommandHandler("channels", channels_info))
+
+    # أزرار ورسائل
     app.add_handler(CallbackQueryHandler(button_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
 
     print("✅ البوت جاهز للعمل ...")
     await app.run_polling()
 
-# تشغيل البوت داخل Streamlit
-st.title("🤖 بوت البرمجة براعة وابتكار")
-st.success("يتم تشغيل البوت الآن في الخلفية ✅")
-
-asyncio.run(main())
+# === تشغيل البوت داخل Streamlit/Render بدون مشاكل حلقة asyncio ===
+try:
+    loop = asyncio.get_running_loop()
+    loop.create_task(main())
+except RuntimeError:
+    asyncio.run(main())
