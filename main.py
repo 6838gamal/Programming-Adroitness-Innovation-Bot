@@ -30,6 +30,7 @@ telegram_app = Application.builder().token(TOKEN).build()
 # وظائف البوت
 # ==========================
 async def home_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("🔥 home_menu triggered")
     user_name = update.effective_user.first_name
     text = f"👋 أهلاً بك {user_name} في مشروع البرمجة براعة وابتكار!\n\n🌟 اختر ما ترغب في استكشافه من القائمة أدناه:"
     keyboard = [
@@ -45,27 +46,31 @@ async def home_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.callback_query.message.edit_text(text, reply_markup=reply_markup)
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("🔥 button_handler triggered:", update.callback_query.data)
     query = update.callback_query
     await query.answer()
-    if query.data == "agent":
+    data = query.data
+
+    if data == "agent":
         await agent_start(update, context, new_message=True)
         context.user_data["mode"] = "agent"
-    elif query.data == "tips":
+    elif data == "tips":
         await agent_tips(update, context, new_message=True)
-    elif query.data == "about":
+    elif data == "about":
         await about_info(update, context)
         context.user_data["mode"] = None
-    elif query.data == "contact":
+    elif data == "contact":
         await contact_info(update, context)
         context.user_data["mode"] = None
-    elif query.data == "channels":
+    elif data == "channels":
         await channels_info(update, context)
         context.user_data["mode"] = None
-    elif query.data in ["home", "main_menu"]:
+    elif data in ["home", "main_menu"]:
         await home_menu(update, context)
         context.user_data["mode"] = None
 
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("🔥 message_handler triggered")
     if context.user_data.get("mode") == "agent":
         await handle_agent_message(update, context)
     else:
@@ -100,14 +105,11 @@ def home():
 # بدء البوت
 # ==========================
 if __name__ == "__main__":
-    # تهيئة وتشغيل البوت قبل استقبال Webhook
     asyncio.run(telegram_app.initialize())
     asyncio.run(telegram_app.start())
-    # ضبط Webhook على URL الخاص بك
     asyncio.run(telegram_app.bot.set_webhook(
         url="https://Programming-Adroitness-Innovation-Bot.onrender.com/webhook"
     ))
     print("🔗 تم تعيين Webhook بنجاح!")
-    # تشغيل Flask
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
