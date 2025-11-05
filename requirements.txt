@@ -4,4 +4,4 @@ python-dotenv
 #streamlit
 asyncio
 nest_asyncio
-flask
+flask[async]
