@@ -4,50 +4,64 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 import os
 
-# ======== مفتاح Gemini ========
+# ============================
+# 🔑 مفتاح Gemini من البيئة
+# ============================
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# ======== دالة الاتصال بـ Gemini ========
+# ============================
+# 🤖 دالة الاتصال بـ Gemini API
+# ============================
 def ask_gemini(prompt):
     """
-    استدعاء Gemini API وإرجاع الرد النصي الآمن
+    استدعاء Gemini API مع معالجة ذكية للأخطاء
     """
+    if not GEMINI_API_KEY:
+        return "⚠️ لم يتم العثور على مفتاح Gemini في الإعدادات. يرجى التواصل مع المطور."
+
     url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
     headers = {"Content-Type": "application/json"}
     params = {"key": GEMINI_API_KEY}
     payload = {"contents": [{"parts": [{"text": prompt}]}]}
 
     try:
-        response = requests.post(url, headers=headers, params=params, json=payload)
+        response = requests.post(url, headers=headers, params=params, json=payload, timeout=15)
         response.raise_for_status()
         result = response.json()
-
-        if not isinstance(result, dict):
-            return "⚠️ الرد غير متوقع من Gemini."
 
         text_output = ""
         for candidate in result.get("candidates", []):
             content = candidate.get("content", {})
-            if isinstance(content, dict):
-                for part in content.get("parts", []):
-                    text_output += part.get("text", "") + "\n"
+            for part in content.get("parts", []):
+                text_output += part.get("text", "") + "\n"
 
         return text_output.strip() if text_output else "⚠️ لم يتم العثور على نص في الرد."
-    except Exception as e:
-        return f"⚠️ حدث خطأ أثناء الاتصال بالذكاء الاصطناعي: {e}"
 
-# ======== واجهة صفحة الوكيل ========
+    except requests.exceptions.Timeout:
+        return "⏳ حدث تأخير في الاتصال بالخادم، حاول مجددًا بعد لحظة."
+    except requests.exceptions.ConnectionError:
+        return "📡 لا يوجد اتصال بالإنترنت، تحقق من الشبكة وحاول مرة أخرى."
+    except requests.exceptions.HTTPError as e:
+        return f"⚠️ خطأ في الخادم ({e.response.status_code}). حاول لاحقًا."
+    except Exception as e:
+        return f"⚠️ حدث خطأ غير متوقع أثناء الاتصال بالذكاء الاصطناعي: {e}"
+
+# ============================
+# 🧠 واجهة الوكيل الذكي
+# ============================
 async def agent_start(update: Update, context: ContextTypes.DEFAULT_TYPE, new_message=False):
     text = (
-        "🤖 مرحبًا بك في *الوكيل الذكي*!\n\n"
-        "يمكنك طرح أي سؤال مثلاً:\n"
-        "• كيف أتعلم بايثون بسرعة؟\n"
-        "• ما أحدث تقنيات الذكاء الاصطناعي؟"
+        "🤖 *مرحبًا بك في الوكيل الذكي!*\n\n"
+        "أنا مساعد مخصص في مجالات البرمجة وعلوم الحاسب والذكاء الاصطناعي والأمن السيبراني وعلم البيانات.\n\n"
+        "💬 يمكنك سؤالي مثلاً:\n"
+        "• كيف أبدأ في الأمن السيبراني؟\n"
+        "• ما الفرق بين الذكاء الاصطناعي والتعلم الآلي؟\n"
+        "• اشرح لي كود بايثون بسيط."
     )
 
     keyboard = [
-        [InlineKeyboardButton("🏠 العودة للرئيسية", callback_data="home")],
-        [InlineKeyboardButton("📌 نصائح شائعة", callback_data="tips")]
+        [InlineKeyboardButton("📌 نصائح الاستخدام", callback_data="tips")],
+        [InlineKeyboardButton("🏠 العودة للرئيسية", callback_data="home")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -58,18 +72,21 @@ async def agent_start(update: Update, context: ContextTypes.DEFAULT_TYPE, new_me
     else:
         await update.callback_query.message.edit_text(text=text, reply_markup=reply_markup, parse_mode="Markdown")
 
-# ======== واجهة النصائح ========
+# ============================
+# 💡 واجهة النصائح
+# ============================
 async def agent_tips(update: Update, context: ContextTypes.DEFAULT_TYPE, new_message=False):
     tips_text = (
-        "💡 *نصائح سريعة لاستخدام الوكيل الذكي:*\n"
-        "1. اطرح أسئلة محددة للحصول على إجابة دقيقة.\n"
-        "2. أعد صياغة السؤال إذا لم تحصل على الرد المطلوب.\n"
-        "3. يمكنك طلب أمثلة للكود أو خطوات عملية."
+        "💡 *نصائح لاستخدام الوكيل الذكي بفعالية:*\n"
+        "1. اطرح سؤالك بوضوح وحدد اللغة أو التقنية.\n"
+        "2. يمكنك طلب أمثلة للكود أو خطوات عملية.\n"
+        "3. استخدمه لتعلم المفاهيم المعقدة بطريقة مبسطة.\n"
+        "4. لا تستخدمه خارج المجالات التقنية."
     )
 
     keyboard = [
-        [InlineKeyboardButton("🏠 العودة للرئيسية", callback_data="home")],
-        [InlineKeyboardButton("🤖 العودة للوكيل الذكي", callback_data="agent")]
+        [InlineKeyboardButton("🤖 العودة للوكيل الذكي", callback_data="agent")],
+        [InlineKeyboardButton("🏠 العودة للرئيسية", callback_data="home")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -78,12 +95,13 @@ async def agent_tips(update: Update, context: ContextTypes.DEFAULT_TYPE, new_mes
     else:
         await update.callback_query.message.edit_text(text=tips_text, reply_markup=reply_markup, parse_mode="Markdown")
 
-# ======== معالجة الرسائل داخل الوكيل ========
+# ============================
+# 💬 معالجة الرسائل داخل الوكيل
+# ============================
 async def handle_agent_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_text = update.message.text.strip()
     chat_id = update.effective_chat.id
 
-    # رسالة مؤقتة أثناء الكتابة
     typing_message = await update.message.reply_text("✍️ المساعد يكتب الرد...")
 
     # محاكاة الكتابة بالنقاط المتحركة
@@ -100,27 +118,75 @@ async def handle_agent_message(update: Update, context: ContextTypes.DEFAULT_TYP
 
     animation_task = asyncio.create_task(animate_typing())
 
+    # 🧠 كلمات المجال التقني المسموح به
+    tech_keywords = [
+        # لغات البرمجة
+        "برمجة", "كود", "بايثون", "Python", "جافا", "Java", "C++", "C#", "HTML", "CSS", "JavaScript", "React", "Django", "Flask",
+        # الذكاء الاصطناعي
+        "ذكاء", "اصطناعي", "Machine Learning", "تعلم آلي", "تعلم عميق", "شبكات عصبية", "LLM", "ChatGPT", "Gemini",
+        # الأمن السيبراني
+        "أمن", "الأمن السيبراني", "Cybersecurity", "اختراق", "حماية", "تشفير", "Firewall", "هاكر", "هجوم", "تحليل جنائي", "Malware",
+        # علم البيانات
+        "بيانات", "تحليل بيانات", "Data Science", "Data Analysis", "إحصاء", "Pandas", "NumPy", "Visualization", "Big Data",
+        # الشبكات والنظم
+        "شبكات", "Network", "Server", "Linux", "نظام", "Operating System", "IP", "DNS", "VPN",
+        # تطوير التطبيقات والمواقع
+        "تطبيق", "App", "موقع", "Web", "Frontend", "Backend", "API", "واجهة", "UI", "UX", "Node.js",
+        # الروبوتات
+        "روبوت", "Robot", "تحكم", "Arduino", "Raspberry", "IoT",
+        # هندسة البرمجيات
+        "Software", "هندسة", "Git", "GitHub", "Agile", "Scrum", "DevOps", "نشر", "Deploy", "CI/CD"
+    ]
+
+    # 🚫 إذا لم يكن السؤال في المجال التقني
+    if not any(keyword.lower() in user_text.lower() for keyword in tech_keywords):
+        animation_task.cancel()
+        try:
+            await animation_task
+        except asyncio.CancelledError:
+            pass
+
+        await typing_message.edit_text(
+            "🤖 هذا الوكيل متخصص فقط في *البرمجة، الذكاء الاصطناعي، الأمن السيبراني، علم البيانات، وتكنولوجيا المعلومات.*\n\n"
+            "🧠 يمكنك سؤالي مثلاً:\n"
+            "• كيف أتعلم تحليل البيانات؟\n"
+            "• ما الفرق بين الذكاء الاصطناعي والتعلم الآلي؟\n"
+            "• كيف أبدأ في الأمن السيبراني؟"
+        )
+        return
+
+    # ✅ تنفيذ الطلب فعليًا
     try:
-        loop = asyncio.get_event_loop()
-        reply = await loop.run_in_executor(None, ask_gemini, user_text)
+        reply = await asyncio.to_thread(ask_gemini, user_text)
     except Exception as e:
         reply = f"⚠️ حدث خطأ أثناء المعالجة: {e}"
 
-    # إيقاف الرسالة المتحركة
+    # إيقاف الرسالة المتحركة بأمان
     animation_task.cancel()
-    await asyncio.sleep(0.2)
+    try:
+        await animation_task
+    except asyncio.CancelledError:
+        pass
 
-    # تعديل الرسالة بالرد النهائي مباشرة
     await typing_message.edit_text(reply)
 
-# ======== التعامل مع الأزرار ========
+# ============================
+# 🕹️ التعامل مع الأزرار
+# ============================
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
     if query.data == "home":
-        await query.message.edit_text("🏠 مرحبًا بك في الصفحة الرئيسية!")
+        keyboard = [
+            [InlineKeyboardButton("🤖 الوكيل الذكي", callback_data="agent")],
+            [InlineKeyboardButton("📌 نصائح", callback_data="tips")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await query.message.edit_text("🏠 مرحبًا بك في الصفحة الرئيسية!", reply_markup=reply_markup)
+
     elif query.data == "tips":
         await agent_tips(update, context)
+
     elif query.data == "agent":
         await agent_start(update, context)
