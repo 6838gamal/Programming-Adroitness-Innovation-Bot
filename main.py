@@ -1,4 +1,5 @@
 import os
+import asyncio
 from flask import Flask, request
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -138,11 +139,11 @@ WEBHOOK_PATH = "/webhook"
 WEBHOOK_URL = f"https://Programming-Adroitness-Innovation-Bot.onrender.com{WEBHOOK_PATH}"
 
 @app.route(WEBHOOK_PATH, methods=["POST"])
-async def webhook():
+def webhook():
     """نقطة استقبال التحديثات من Telegram"""
     data = request.get_json(force=True)
     update = Update.de_json(data, telegram_app.bot)
-    await telegram_app.process_update(update)
+    asyncio.run(telegram_app.process_update(update))
     return "OK", 200
 
 @app.route("/")
@@ -158,8 +159,13 @@ def home():
 # نقطة التشغيل
 # ====================================================
 if __name__ == "__main__":
-    print(f"🔗 تعيين Webhook على: {WEBHOOK_URL}")
-    telegram_app.bot.set_webhook(url=WEBHOOK_URL)
+    # استخدام asyncio.run لضمان تنفيذ set_webhook بشكل صحيح
+    async def setup_webhook():
+        await telegram_app.bot.delete_webhook()
+        await telegram_app.bot.set_webhook(url=WEBHOOK_URL)
+        print(f"🔗 تم تعيين Webhook على: {WEBHOOK_URL}")
+
+    asyncio.run(setup_webhook())
 
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
