@@ -1,4 +1,5 @@
-import asyncio
+import os
+from flask import Flask, request
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
@@ -19,7 +20,17 @@ from agent_page import agent_start, handle_agent_message, agent_tips
 # ====================================================
 # رسالة التشغيل
 # ====================================================
-print("🚀 بوت البرمجة براعة وابتكار بدأ التشغيل بنجاح!")
+print("🚀 بوت البرمجة براعة وابتكار بدأ التشغيل بنجاح (نسخة Render Flask)!")
+
+# ====================================================
+# إعداد Flask
+# ====================================================
+app = Flask(__name__)
+
+# ====================================================
+# إعداد تطبيق Telegram
+# ====================================================
+telegram_app = Application.builder().token(TOKEN).build()
 
 # ====================================================
 # القائمة الرئيسية
@@ -44,7 +55,7 @@ async def home_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.callback_query.message.edit_text(text, reply_markup=reply_markup)
 
 # ====================================================
-# معالجة الأزرار (Callback Buttons)
+# معالجة الأزرار
 # ====================================================
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -77,14 +88,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # التعامل مع الرسائل النصية
 # ====================================================
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # إذا المستخدم في وضع "الوكيل الذكي"
     if context.user_data.get("mode") == "agent":
         await handle_agent_message(update, context)
     else:
         await home_menu(update, context)
 
 # ====================================================
-# أوامر مباشرة (Commands)
+# أوامر مباشرة
 # ====================================================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await home_menu(update, context)
@@ -110,30 +120,46 @@ async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["mode"] = None
 
 # ====================================================
-# تشغيل التطبيق
+# تسجيل Handlers داخل تطبيق Telegram
 # ====================================================
-def main():
-    print("✅ بدء تشغيل البوت (Polling Mode)...")
-
-    app = Application.builder().token(TOKEN).build()
-
-    # ===== أوامر =====
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("agent", agent_command))
-    app.add_handler(CommandHandler("about", about_command))
-    app.add_handler(CommandHandler("contact", contact_command))
-    app.add_handler(CommandHandler("channels", channels_command))
-    app.add_handler(CommandHandler("menu", menu_command))  # زر الرجوع للقائمة
-
-    # ===== الأزرار والرسائل =====
-    app.add_handler(CallbackQueryHandler(button_handler))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
-
-    # ===== تشغيل البوت =====
-    app.run_polling(drop_pending_updates=True)
+telegram_app.add_handler(CommandHandler("start", start))
+telegram_app.add_handler(CommandHandler("agent", agent_command))
+telegram_app.add_handler(CommandHandler("about", about_command))
+telegram_app.add_handler(CommandHandler("contact", contact_command))
+telegram_app.add_handler(CommandHandler("channels", channels_command))
+telegram_app.add_handler(CommandHandler("menu", menu_command))
+telegram_app.add_handler(CallbackQueryHandler(button_handler))
+telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
 
 # ====================================================
-# نقطة الدخول للتشغيل
+# إعداد Webhook لـ Render
+# ====================================================
+WEBHOOK_PATH = "/webhook"
+WEBHOOK_URL = f"https://Programming-Adroitness-Innovation-Bot.onrender.com{WEBHOOK_PATH}"
+
+@app.route(WEBHOOK_PATH, methods=["POST"])
+async def webhook():
+    """نقطة استقبال التحديثات من Telegram"""
+    data = request.get_json(force=True)
+    update = Update.de_json(data, telegram_app.bot)
+    await telegram_app.process_update(update)
+    return "OK", 200
+
+@app.route("/")
+def home():
+    return (
+        "<h2>🤖 بوت البرمجة براعة وابتكار</h2>"
+        "<p>يعمل الآن بنجاح على Render!</p>"
+        "<p>👨‍💻 المطور: <b>جمال الهويش</b></p>"
+        "<p>🚀 المشروع: Programming Adroitness & Innovation</p>"
+    ), 200
+
+# ====================================================
+# نقطة التشغيل
 # ====================================================
 if __name__ == "__main__":
-    main()
+    print(f"🔗 تعيين Webhook على: {WEBHOOK_URL}")
+    telegram_app.bot.set_webhook(url=WEBHOOK_URL)
+
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
