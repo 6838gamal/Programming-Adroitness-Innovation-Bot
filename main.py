@@ -16,21 +16,13 @@ from contact import contact_info
 from channels import channels_info
 from agent_page import agent_start, handle_agent_message, agent_tips
 
-# ====================================================
-# إعدادات البوت
-# ====================================================
-TOKEN = TOKEN
-WEBHOOK_URL = "https://Programming-Adroitness-Innovation-Bot.onrender.com/webhook"
 PORT = int(os.environ.get("PORT", 5000))
+WEBHOOK_URL = "https://Programming-Adroitness-Innovation-Bot.onrender.com/webhook"
 
-# ====================================================
 # إعداد تطبيق Telegram
-# ====================================================
 telegram_app = Application.builder().token(TOKEN).build()
 
-# ====================================================
-# وظائف البوت
-# ====================================================
+# ===== وظائف البوت =====
 async def home_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_name = update.effective_user.first_name
     text = f"👋 أهلاً بك {user_name} في مشروع البرمجة براعة وابتكار!\n\n🌟 اختر ما ترغب في استكشافه من القائمة أدناه:"
@@ -73,9 +65,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await home_menu(update, context)
 
-# ====================================================
-# تسجيل Handlers
-# ====================================================
+# ===== تسجيل Handlers =====
 telegram_app.add_handler(CommandHandler("start", home_menu))
 telegram_app.add_handler(CommandHandler("agent", button_handler))
 telegram_app.add_handler(CommandHandler("about", about_info))
@@ -84,14 +74,12 @@ telegram_app.add_handler(CommandHandler("channels", channels_info))
 telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
 telegram_app.add_handler(CallbackQueryHandler(button_handler))
 
-# ====================================================
-# تشغيل البوت مباشرة كـ Webhook (يدير Flask داخليًا)
-# ====================================================
+# ===== التشغيل باستخدام run_webhook =====
 if __name__ == "__main__":
     print("🚀 بدء تشغيل بوت البرمجة براعة وابتكار على Render Webhook Mode")
     telegram_app.run_webhook(
         listen="0.0.0.0",
         port=PORT,
-        webhook_path="/webhook",
-        webhook_url=WEBHOOK_URL
+        webhook_url=WEBHOOK_URL,
+        drop_pending_updates=True
     )
