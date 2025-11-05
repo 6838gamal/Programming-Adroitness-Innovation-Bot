@@ -22,13 +22,11 @@ from contact import contact_info
 from channels import channels_info
 from agent_page import agent_start, handle_agent_message, agent_tips
 
+# ===== إعداد Flask و Telegram =====
 app = Flask(__name__)
-
 telegram_app = Application.builder().token(TOKEN).build()
 
-# ==========================
-# وظائف البوت
-# ==========================
+# ================= وظائف البوت =================
 async def home_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("🔥 home_menu triggered")
     user_name = update.effective_user.first_name
@@ -76,9 +74,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await home_menu(update, context)
 
-# ==========================
-# تسجيل Handlers
-# ==========================
+# ================= تسجيل Handlers =================
 telegram_app.add_handler(CommandHandler("start", home_menu))
 telegram_app.add_handler(CommandHandler("agent", button_handler))
 telegram_app.add_handler(CommandHandler("about", about_info))
@@ -87,23 +83,19 @@ telegram_app.add_handler(CommandHandler("channels", channels_info))
 telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
 telegram_app.add_handler(CallbackQueryHandler(button_handler))
 
-# ==========================
-# Webhook route
-# ==========================
+# ================= Webhook route =================
 @app.route("/webhook", methods=["POST"])
-def webhook():
+async def webhook():
     data = request.get_json(force=True)
     update = Update.de_json(data, telegram_app.bot)
-    asyncio.get_event_loop().create_task(telegram_app.process_update(update))
+    await telegram_app.process_update(update)
     return "OK", 200
 
 @app.route("/")
 def home():
     return "🤖 بوت البرمجة براعة وابتكار يعمل بنجاح على Render!"
 
-# ==========================
-# بدء البوت
-# ==========================
+# ================= بدء البوت =================
 if __name__ == "__main__":
     asyncio.run(telegram_app.initialize())
     asyncio.run(telegram_app.start())
